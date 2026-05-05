@@ -1,16 +1,22 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 app = FastAPI()
 
-connections = []
+@app.get("/")
+def home():
+    return {"status": "Chat API running"}
+
+connections = set()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    connections.append(websocket)
+    connections.add(websocket)
 
-    while True:
-        data = await websocket.receive_text()
-
-        for connection in connections:
-            await connection.send_text(data)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            for connection in connections:
+                await connection.send_text(data)
+    except WebSocketDisconnect:
+        connections.remove(websocket)
